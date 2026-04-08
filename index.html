@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exportador Formulario 1146 — DGI / PADI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --border: #2a2f3f;
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  /* grid texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 780px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 36px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid rgba(59,130,246,0.3);
+    padding: 3px 10px;
+    border-radius: 2px;
+    margin-bottom: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Config grid */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .config-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 20px; }
+  }
+
+  .field label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus {
+    border-color: var(--accent);
+  }
+
+  .field input.invalid {
+    border-color: var(--danger);
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.04);
+  }
+
+  .dropzone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .drop-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .drop-sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .drop-loaded {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent2);
+  }
+
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 320px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  thead tr {
+    background: rgba(59,130,246,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  th {
+    padding: 8px 10px;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+  tbody tr:hover { background: rgba(59,130,246,0.06); }
+
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(42,47,63,0.6);
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  td.importe { text-align: right; color: var(--accent2); }
+  td.linea { text-align: center; }
+  td.warn { color: var(--warn); }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* Log */
+  .log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.8;
+    max-height: 160px;
+    overflow-y: auto;
+    display: none;
+  }
+
+  .log.show { display: block; }
+  .log .ok { color: var(--accent2); }
+  .log .err { color: var(--danger); }
+  .log .info { color: var(--muted); }
+  .log .warn { color: var(--warn); }
+
+  /* Alert */
+  .alert {
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--mono);
+    margin-top: 12px;
+    display: none;
+  }
+
+  .alert.show { display: block; }
+  .alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--accent2); }
+  .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
+
+  /* Format reference */
+  details {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  summary:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+
+  .format-table {
+    padding: 0 14px 14px;
+  }
+
+  .format-table table { font-size: 11px; }
+  .format-table th { font-size: 9px; }
+
+  footer {
+    margin-top: 40px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="badge">DGI Uruguay</div>
+    <h1>Formulario <span>1146</span> → TXT</h1>
+    <p class="subtitle">Convertidor Excel a formato de importación — PADI / DGI Uruguay</p>
+  </header>
+
+  <!-- Configuración -->
+  <div class="panel">
+    <div class="panel-title">Configuración del responsable</div>
+    <div class="config-grid">
+      <div class="field">
+        <label>RUT Responsable</label>
+        <input type="text" id="rut" placeholder="ej: 217549910015" maxlength="12" value="217549910015">
+      </div>
+      <div class="field">
+        <label>Período (AAAAMM)</label>
+        <input type="text" id="periodo" placeholder="ej: 202603" maxlength="6" value="202602">
+      </div>
+      <div class="field">
+        <label>Formulario</label>
+        <input type="text" id="formulario" value="01146" maxlength="5" readonly style="opacity:0.5">
+      </div>
+    </div>
+  </div>
+
+  <!-- Carga de archivo -->
+  <div class="panel">
+    <div class="panel-title">Archivo de datos</div>
+
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      <span class="drop-icon">📂</span>
+      <div class="drop-title">Arrastrá el Excel acá o hacé clic para seleccionar</div>
+      <div class="drop-sub">Acepta .xlsx generado con la plantilla, o cualquier Excel con las columnas correctas</div>
+    </div>
+
+    <div class="drop-loaded" id="loadedIndicator">
+      <span>✓</span><span id="loadedName"></span>
+    </div>
+
+    <div id="columnsHelp" style="margin-top:14px; font-size:11px; color:var(--muted); font-family:var(--mono); display:none;">
+      Columnas esperadas (hoja "DATOS", desde fila 8):<br>
+      A=Tipo Doc (1=NIE,2=RUC,3=CI) · B=Nro Documento · C=País · D=Mes/Año (AAAAMM) · E=Línea · F=Importe
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="panel" id="previewPanel" style="display:none;">
+    <div class="panel-title">Vista previa de registros</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Tipo Doc</th>
+            <th>Documento</th>
+            <th>País</th>
+            <th>Mes/Año</th>
+            <th>Línea</th>
+            <th>Importe</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Registros</div>
+        <div class="stat-value" id="statCount">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Importe</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Errores</div>
+        <div class="stat-value" id="statErrors" style="color:var(--accent2)">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exportar -->
+  <div class="panel">
+    <div class="panel-title">Generar archivo</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnExport" disabled>
+        ↓ Descargar archivo .txt
+      </button>
+      <button class="btn btn-secondary" id="btnReset">
+        ↺ Limpiar
+      </button>
+    </div>
+    <div class="alert" id="alertBox"></div>
+    <div class="log" id="logBox"></div>
+  </div>
+
+  <!-- Formato de referencia -->
+  <details>
+    <summary>📋 Referencia del formato DBF (PADI / DGI)</summary>
+    <div class="format-table">
+      <table>
+        <thead>
+          <tr><th>Campo DBF</th><th>Tipo</th><th>Long.</th><th>Concepto</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>IRPFTipDoc</td><td>N</td><td>2</td><td>Tipo doc informado (1=NIE, 2=RUC, 3=CI)</td></tr>
+          <tr><td>IRPFPais</td><td>C</td><td>2</td><td>País del retenido (UY)</td></tr>
+          <tr><td>IRPFDoc</td><td>C</td><td>12</td><td>Número de documento (rellena ceros izq.)</td></tr>
+          <tr><td>IRPFAnoMes</td><td>N</td><td>6</td><td>Año/mes de información (AAAAMM)</td></tr>
+          <tr><td>IRPFImpues</td><td>N</td><td>3</td><td>Línea (371=monto gravado, 171=retención)</td></tr>
+          <tr><td>IRPFImport</td><td>N</td><td>12</td><td>Importe informado</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <footer>
+    Funciona 100% en el navegador — ningún dato se envía a ningún servidor.
+  </footer>
+
+</div>
+
+<script>
+const TIPO_DOC_MAP = { 1: 1, 2: 2, 3: 3 };
+
+let parsedRows = [];
+
+// Drag & drop
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      let ws = wb.Sheets['DATOS'] || wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+      if (json[2] && json[2][1] != null) {
+        const rutVal = String(json[2][1]).trim();
+        if (rutVal) document.getElementById('rut').value = rutVal;
+      }
+      if (json[3] && json[3][1] != null) {
+        const perVal = String(json[3][1]).trim();
+        if (perVal) document.getElementById('periodo').value = perVal;
+      }
+
+      parsedRows = [];
+      for (let i = 7; i < json.length; i++) {
+        const row = json[i];
+        if (!row || row[0] == null) continue;
+        parsedRows.push({
+          tipoDoc: row[0],
+          nroDoc:  row[1],
+          pais:    row[2] || 'UY',
+          anoMes:  row[3],
+          linea:   row[4],
+          importe: row[5],
+        });
+      }
+
+      document.getElementById('dropzone').style.display = 'none';
+      const li = document.getElementById('loadedIndicator');
+      li.style.display = 'flex';
+      document.getElementById('loadedName').textContent = file.name + ' — ' + parsedRows.length + ' filas leídas';
+      document.getElementById('columnsHelp').style.display = 'block';
+      renderPreview();
+    } catch(err) {
+      showAlert('Error al leer el archivo: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderPreview() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  let totalImporte = 0, errCount = 0;
+
+  parsedRows.forEach((r, i) => {
+    let estado = '✓', estadoClass = 'ok', err = [];
+    if (!r.tipoDoc || !TIPO_DOC_MAP[parseInt(r.tipoDoc)]) err.push('Tipo Doc inválido');
+    if (!r.nroDoc) err.push('Sin documento');
+    if (!r.anoMes) err.push('Sin Mes/Año');
+    if (!r.linea) err.push('Sin línea');
+    if (r.importe == null || r.importe === '') err.push('Sin importe');
+    if (err.length) { estado = '⚠ ' + err.join(', '); estadoClass = 'err'; errCount++; }
+    else { totalImporte += parseFloat(r.importe) || 0; }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td><td>${r.tipoDoc}</td><td>${r.nroDoc || ''}</td>
+      <td>${r.pais || 'UY'}</td><td>${r.anoMes || ''}</td>
+      <td class="linea">${r.linea || ''}</td>
+      <td class="importe">${r.importe != null ? Number(r.importe).toLocaleString('es-UY') : ''}</td>
+      <td class="${estadoClass}">${estado}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('previewPanel').style.display = 'block';
+  document.getElementById('statCount').textContent = parsedRows.length;
+  document.getElementById('statTotal').textContent = totalImporte.toLocaleString('es-UY', {maximumFractionDigits: 0});
+  const errEl = document.getElementById('statErrors');
+  errEl.textContent = errCount;
+  errEl.style.color = errCount > 0 ? 'var(--danger)' : 'var(--accent2)';
+  document.getElementById('btnExport').disabled = parsedRows.length === 0;
+}
+
+function pad(val, len) {
+  return String(val).trim().padStart(len, '0');
+}
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  const rut      = document.getElementById('rut').value.trim();
+  const periodo  = document.getElementById('periodo').value.trim();
+  const formulario = document.getElementById('formulario').value.trim();
+
+  const TIPO_DOC_TXT = { 1: '01', 2: '02', 3: '03' };
+
+  const log = document.getElementById('logBox');
+  log.innerHTML = '';
+  log.classList.add('show');
+
+  let lines = [], skipped = 0, ok = 0;
+
+  addLog('info', `Iniciando exportación — ${parsedRows.length} registros`);
+  addLog('info', `RUT: ${rut} | Período: ${periodo} | Form: ${formulario}`);
+
+  parsedRows.forEach((r, i) => {
+    const tipoDocCode = TIPO_DOC_TXT[parseInt(r.tipoDoc)];
+    if (!tipoDocCode || !r.nroDoc || !r.anoMes || !r.linea || r.importe == null) {
+      addLog('warn', `Fila ${i+1}: omitida (datos incompletos)`);
+      skipped++;
+      return;
+    }
+
+    const rutPadded  = pad(rut, 12);
+    const docInf     = pad(String(r.nroDoc).replace(/\D/g, ''), 12);
+    const anoMesStr  = pad(String(r.anoMes).replace(/\D/g, ''), 6);
+    const lineaStr   = pad(String(r.linea), 3);
+    const importeVal = Math.round(parseFloat(r.importe));
+    const importeStr = importeVal >= 0
+      ? pad(importeVal, 12)
+      : '-' + pad(Math.abs(importeVal), 11);
+
+    lines.push(
+      `02;UY;${rutPadded};${pad(formulario,5)};${pad(periodo,6)};` +
+      `${tipoDocCode};UY;${docInf};${anoMesStr};${lineaStr};${importeStr};`
+    );
+    ok++;
+  });
+
+  if (lines.length === 0) {
+    addLog('err', 'No se generaron registros válidos.');
+    showAlert('No hay registros válidos para exportar.', 'error');
+    return;
+  }
+
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `Formulario1146-${rut}-${periodo}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  addLog('ok', `✓ ${ok} registros generados. ${skipped} omitidos.`);
+  showAlert(`✓ Archivo Enviar.TXT generado con ${ok} registros. Importalo en PADI (Rubro 5 → Importar).`, 'success');
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  parsedRows = [];
+  document.getElementById('dropzone').style.display = 'block';
+  document.getElementById('loadedIndicator').style.display = 'none';
+  document.getElementById('columnsHelp').style.display = 'none';
+  document.getElementById('previewPanel').style.display = 'none';
+  document.getElementById('logBox').classList.remove('show');
+  document.getElementById('alertBox').classList.remove('show');
+  document.getElementById('btnExport').disabled = true;
+  document.getElementById('fileInput').value = '';
+});
+
+function addLog(type, msg) {
+  const log = document.getElementById('logBox');
+  const span = document.createElement('div');
+  span.className = type;
+  span.textContent = '› ' + msg;
+  log.appendChild(span);
+  log.scrollTop = log.scrollHeight;
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('alertBox');
+  el.textContent = msg;
+  el.className = 'alert show alert-' + (type === 'error' ? 'error' : 'success');
+}
+</script>
+</body>
+</html>
