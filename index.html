@@ -9,14 +9,14 @@
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
 
   :root {
-    --bg: #0f1117;
-    --surface: #181c27;
-    --border: #2a2f3f;
-    --accent: #3b82f6;
-    --accent2: #10b981;
-    --danger: #ef4444;
-    --warn: #f59e0b;
-    --text: #e2e8f0;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --accent: #2563eb;
+    --accent2: #059669;
+    --danger: #dc2626;
+    --warn: #d97706;
+    --text: #1e293b;
     --muted: #64748b;
     --mono: 'IBM Plex Mono', monospace;
     --sans: 'IBM Plex Sans', sans-serif;
@@ -41,8 +41,8 @@
     position: fixed;
     inset: 0;
     background-image:
-      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(59,130,246,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.06) 1px, transparent 1px);
     background-size: 32px 32px;
     pointer-events: none;
     z-index: 0;
@@ -78,7 +78,7 @@
     font-size: 26px;
     font-weight: 600;
     line-height: 1.2;
-    color: #fff;
+    color: #0f172a;
     margin-bottom: 6px;
   }
 
@@ -230,7 +230,7 @@
   }
 
   thead tr {
-    background: rgba(59,130,246,0.08);
+    background: #dbeafe;
     position: sticky;
     top: 0;
     z-index: 2;
@@ -248,12 +248,12 @@
     white-space: nowrap;
   }
 
-  tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
-  tbody tr:hover { background: rgba(59,130,246,0.06); }
+  tbody tr:nth-child(even) { background: rgba(0,0,0,0.025); }
+  tbody tr:hover { background: rgba(59,130,246,0.07); }
 
   td {
     padding: 6px 10px;
-    border-bottom: 1px solid rgba(42,47,63,0.6);
+    border-bottom: 1px solid rgba(226,232,240,0.8);
     color: var(--text);
     white-space: nowrap;
   }
@@ -398,7 +398,7 @@
     gap: 6px;
   }
 
-  summary:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+  summary:hover { color: var(--text); background: rgba(0,0,0,0.03); }
 
   .format-table {
     padding: 0 14px 14px;
@@ -539,7 +539,7 @@
   </details>
 
   <footer>
-    Funciona 100% en el navegador — ningún dato se envía a ningún servidor.
+    Funciona 100% en el navegador — ningún dato se envía a ningún servidor. v1.1
   </footer>
 
 </div>
@@ -570,6 +570,18 @@ function handleFile(file) {
     try {
       const wb = XLSX.read(e.target.result, { type: 'array' });
       let ws = wb.Sheets['DATOS'] || wb.Sheets[wb.SheetNames[0]];
+
+      // Expandir !ref para cubrir todas las celdas reales (evita límite fijo de la plantilla)
+      if (ws['!ref']) {
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        Object.keys(ws).filter(k => k[0] !== '!').forEach(k => {
+          const addr = XLSX.utils.decode_cell(k);
+          if (addr.r > range.e.r) range.e.r = addr.r;
+          if (addr.c > range.e.c) range.e.c = addr.c;
+        });
+        ws['!ref'] = XLSX.utils.encode_range(range);
+      }
+
       const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
       if (json[2] && json[2][1] != null) {
